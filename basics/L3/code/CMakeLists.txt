@@ -7,5 +7,7 @@ include_directories(SYSTEM ./src)
 
 add_executable(L3
         src/main.c
+        src/linkedList.c
+        src/book.c
 )
 

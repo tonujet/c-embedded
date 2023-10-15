@@ -1,38 +1,44 @@
 #include <malloc.h>
 #include "linkedList.h"
 
+LinkedList *createLinkedList(){
+    LinkedList *linkedList = malloc(sizeof(LinkedList));
+    linkedList->head = NULL;
+    linkedList->tail = NULL;
+    linkedList->size = 0;
+    return linkedList;
+}
 
-
-void pushAll(void **data, int length){
+void pushAll(void **data, int length, LinkedList *l){
     for (int i = 0; i < length; i++) {
-        push(data[i]);
+        push(data[i], l);
     }
 }
 
-void push(void *data){
-    if(head == NULL){
-        head = (Node *)malloc(sizeof(Node));
-        initNode(head, data);
-        tail = head;
+void push(void *data, LinkedList *l){
+    if(l->head == NULL){
+        l->head = (Node *)malloc(sizeof(Node));
+        _createNode(l->head, data, l);
+        l->tail = l->head;
         return;
     }
-    Node *prev = tail;
-    tail = (Node *)malloc(sizeof(Node));
-    initNode(tail, data);
-    prev->next = tail;
-    tail->prev = prev;
+    Node *prev = l->tail;
+    l->tail = (Node *)malloc(sizeof(Node));
+    _createNode(l->tail, data, l);
+    prev->next = l->tail;
+    l->tail->prev = prev;
 };
 
-void* pop(){
-    if(head == NULL) return NULL;
-    size--;
+void* pop(LinkedList *l){
+    if(l->head == NULL) return NULL;
+    l->size--;
 
-    Node *prevTail = tail;
-    tail = tail->prev;
+    Node *prevTail = l->tail;
+    l->tail = (Node *) l->tail->prev;
 
-    if (tail != NULL)tail->next = NULL;
+    if (l->tail != NULL)l->tail->next = NULL;
     else {
-        head = NULL;
+        l->head = NULL;
         return NULL;
     }
 
@@ -41,20 +47,30 @@ void* pop(){
     return data;
 };
 
-void printList(void (*toString)(void *data)){
-    Node *el = (Node *) head;
-    while(el != NULL){
-        toString(el -> data);
-        el = (Node *) el->next;
+void printList(void (*toString)(void *data), LinkedList *l){
+    Node *node = l->head;
+    while(node != NULL){
+        toString(node -> data);
+        node = (Node *) node->next;
     }
 };
 
 
-void initNode(Node *node, void *data){
+void _createNode(Node *node, void *data, LinkedList *l){
     node->data = data;
-    node->index = size++;
+    node->index = l->size++;
     node->next = NULL;
     node->prev = NULL;
+}
+
+void freeList(LinkedList *l){
+    Node *node = l->head;
+    while (node != NULL){
+        Node *prevNode = node;
+        node = (Node *) node->next;
+        free(prevNode);
+    }
+    free(l);
 }
 
 
