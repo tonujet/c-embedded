@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <math.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +45,12 @@ ADC_HandleTypeDef hadc1;
 
 /* USER CODE BEGIN PV */
 
+uint16_t leds =  GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+float stages[] = {0, 0.2, 0.4, 0.6, 0.8, 1};
+uint8_t stages_len = sizeof(stages)/sizeof(stages[0]);
+float temp_ratio = 0;
+GPIO_TypeDef* reg = GPIOD;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,48 +63,31 @@ static void MX_ADC1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t leds[] = { GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14, GPIO_PIN_15 };
-uint8_t length = sizeof(leds)/sizeof(leds[0]);
-float stages[] = {0, 0.2, 0.4, 0.6, 0.8, 1};
-uint8_t stages_len = sizeof(stages)/sizeof(stages[0]);
-float temp_ratio = 0;
-GPIO_TypeDef* reg = GPIOD;
 
 
-static void light_up_to(uint8_t desired_leds_lenght )
+static void light_up(uint16_t desired_leds )
 {
-	for(uint8_t i = 0; i < length; i++)
-	{
-		uint16_t led = leds[i];
-		HAL_GPIO_WritePin(reg, led, GPIO_PIN_RESET);
-	}
-
-	for(uint8_t i = 0; i < desired_leds_lenght; i++)
-	{
-		uint16_t led = leds[i];
-		HAL_GPIO_WritePin(reg, led, GPIO_PIN_SET);
-	}
+	HAL_GPIO_WritePin(reg, leds, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(reg, desired_leds, GPIO_PIN_SET);
 }
 
-static uint8_t calc_length(uint32_t adc_value, float hysteresis){
+static uint16_t calc_desired_leds(uint32_t adc_value, float hysteresis){
 	float ratio = (float) adc_value / ADC_MAX;
 	float diff = fabs(temp_ratio - ratio);
 
 	if(diff < hysteresis) ratio = temp_ratio;
 	else temp_ratio = ratio;
 
-	uint8_t desired_leds_len = 0;
+	uint16_t desired_leds = 0;
 	for(int i = 1; i < stages_len; i++)
 	{
 		float stage = stages[i];
 		float prev_stage = stages[i - 1];
 		if (ratio > prev_stage && ratio <= stage)
-		{
-			desired_leds_len = i - 1;
-			break;
-		}
+            break;
+        desired_leds |= pow(2, i - 1) << 12
 	}
-	return desired_leds_len;
+	return desired_leds;
 }
 
 
@@ -107,8 +97,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	if(hadc->Instance == ADC1)
 	{
 		adc_value = HAL_ADC_GetValue(&hadc1);
-		uint8_t desired_leds_len = calc_length(adc_value , 0.05);
-		light_up_to(desired_leds_len);
+		uint16_t desired_leds = calc_desired_leds(adc_value , 0.05);
+		light_up(desired_leds);
 		HAL_ADC_Start_IT(&hadc1);
 	}
 }
